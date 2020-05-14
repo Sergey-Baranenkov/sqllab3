@@ -1,0 +1,166 @@
+drop schema public cascade;
+create schema public;
+
+create table users (
+    user_id bigserial primary key not null,
+    nickname text not null,
+    registered_at timestamptz default current_timestamp
+); create index if not exists nickname on users (nickname);
+
+
+create table comments (
+    auth_id bigserial references users (user_id) on delete cascade on update cascade,
+    comment_id bigserial primary key not null,
+    message_text text not null,
+
+    creation_time      timestamptz default current_timestamp,
+    modification_time   timestamptz
+); create index if not exists comments_auth_id_idx on comments (auth_id);
+
+
+create or replace function update__comment__modification_time() returns trigger as $$
+    begin
+        new.modification_time = current_timestamp;
+        return new;
+    end;
+$$ language plpgsql;
+
+drop trigger if exists update_comment__trigger on comments;
+create trigger update_comment__trigger
+    before update on comments
+for row execute procedure update__comment__modification_time();
+
+--  бд в 1 нормальной форме так как все атрибуты атомарны и их нельзя разделить на более простые.
+--  бд во 2 нормальной форме так как есть первичный ключ и неключевые атрибуты зависят только от целого ключа, а не от подмножества его атрибутов
+--  бд в 3 форме так как нет транзитивных зависимостей (зависимости одного неключевого атрибута от других)
+--  бд в 3.5 форме так как нет зависимостей ключевого атрибута от неключевого атрибута
+--  бд в 4 форме так как нет многозначных зависимостей ( когда неключевые не зависят друг от друга, но зависят от pkey по отдельности)
+--  бд в 5 форме так как нет нетривиальных зависимостей (дополнительных требований) между столбцами
+--  бд в 6 форме так как не может подвергнуться дальнейшей декомпозиции
+--  (насколько я понял, может быть нарушена только на интервальных данных, которых у нас нет)
+
+
+
+create or replace function create_database() returns void as $$
+    begin
+        create database lab4_db with owner = me;
+    end;
+$$ language plpgsql;
+
+create or replace function drop_database() returns void as $$
+    begin
+        drop database lab4_db;
+    end;
+$$ language plpgsql;
+
+
+create or replace function get_all_users() returns json as $$
+    begin
+        return (select json_agg(users) from users);
+    end;
+$$ language plpgsql;
+
+
+create or replace function get_all_comments() returns json as $$
+    begin
+        return (select json_agg(comments) from comments);
+    end;
+$$ language plpgsql;
+
+create or replace function truncate_users() returns void as $$
+    begin
+        truncate users cascade;
+    end;
+$$ language plpgsql;
+
+create or replace function truncate_comments() returns void as $$
+    begin
+        truncate comments;
+    end;
+$$ language plpgsql;
+
+create or replace function insert_user(_nickname text) returns json as $$
+    declare output json;
+    begin
+        insert into users (nickname) values (_nickname) returning to_json(*) into output;
+        return output;
+    end;
+$$ language plpgsql;
+
+
+create or replace function insert_comment(_auth_id bigint, _message_text text) returns json as $$
+    declare output json;
+    begin
+        insert into comments (auth_id, message_text)  values (_auth_id, _message_text) returning to_json(*) into output;
+        return output;
+    end;
+$$ language plpgsql;
+
+
+create or replace function insert_comment(_auth_id bigint, _message_text text) returns json as $$
+    declare output json;
+    begin
+        insert into comments (auth_id, message_text)  values (_auth_id, _message_text) returning to_json(*) into output;
+        return output;
+    end;
+$$ language plpgsql;
+
+
+create or replace function update_user_nickname(_user_id bigint, new_nickname text) returns json as $$
+    declare output json;
+    begin
+        update users set nickname = new_nickname where user_id = _user_id returning to_json(*) into output;
+        return output;
+    end;
+$$ language plpgsql;
+
+create or replace function update_comment_text(_comment_id bigint, _message_text text) returns json as $$
+    declare output json;
+    begin
+        update comments set message_text = _message_text where comment_id = _comment_id returning to_json(*) into output;
+        return output;
+    end;
+$$ language plpgsql;
+
+
+create or replace function select_users_by_nickname(_nickname text) returns json as $$
+    begin
+        return (select json_agg(users) from users where nickname = _nickname);
+    end;
+$$ language plpgsql;
+
+create or replace function select_comment_by_message(_message_text text) returns json as $$
+    begin
+        return (select json_agg(comments) from comments where message_text = _message_text);
+    end;
+$$ language plpgsql;
+
+
+create or replace function delete_users_by_nickname(_nickname text) returns void as $$
+    begin
+        delete from users where nickname = _nickname;
+    end;
+$$ language plpgsql;
+
+create or replace function delete_comments_by_message(_message_text text) returns void as $$
+    begin
+        delete from comments where message_text = _message_text;
+    end;
+$$ language plpgsql;
+
+
+create or replace function delete_particular_user(_user_id text) returns void as $$
+    begin
+        delete from users where user_id = _user_id;
+    end;
+$$ language plpgsql;
+
+create or replace function delete_particular_comment(_comment_id text) returns void as $$
+    begin
+        delete from comments where comment_id = _comment_id;
+    end;
+$$ language plpgsql;
+
+
+
+
