@@ -2,7 +2,7 @@
 ### В таблице users хранится информация о пользователях
 ### В таблице comments хранится информация о комментариях
 
-![alt text](schema.jpg)
+![alt text](schema.png)
 
 [Код SQL](sql_code)
 
