@@ -1,3 +1,5 @@
+package main
+var dropCreateFunctions = `
 create extension if not exists dblink;
 create or replace function create_database() returns void as $$
     begin
@@ -18,8 +20,8 @@ create or replace function drop_database() returns void as $$
         );
     end;
 $$ language plpgsql;
-
-
+`
+var sqlFunctions = `
 create or replace function create_tables() returns void as $$
     begin
         create table users (
@@ -159,4 +161,4 @@ create or replace function delete_particular_comment(_comment_id bigint) returns
 		delete from comments where comment_id = _comment_id;
 	end;
 $$ language plpgsql;
-
+`
